@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SimpleShop{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <a href="/" class="brand">SimpleShop</a>
+        <nav>
+            <a href="{{ url_for('product.products') }}">Products</a>
+            <a href="{{ url_for('order.view_cart') }}">Cart</a>
+            <a href="{{ url_for('order.order_history') }}">Orders</a>
+            <a href="{{ url_for('order.track_order') }}">Order Lookup</a>
+            <a href="{{ url_for('profile') }}">Profile</a>
+            
+            {% if session.get('user') %}
+                <span style="font-size: 0.85rem; color: #10b981; margin-left: 1.5rem;">
+                    Logged in as <strong>{{ session.get('user') }}</strong> ({{ session.get('role') }})
+                </span>
+                <a href="{{ url_for('logout') }}" style="color: #ef4444;">Logout</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Login</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="container">
+        {% block content %}
+        
+        {% endblock %}
+
+        {% if query %}
+        <div class="debug-box">
+            <div class="debug-title">Backend Executed Query (SQL Debug View)</div>
+            <code>{{ query }}</code>
+        </div>
+        {% endif %}
+    </main>
+</body>
+</html>

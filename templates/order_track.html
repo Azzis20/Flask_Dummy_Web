@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>Track Order</h2>
+    <form method="GET" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <input type="text" name="order_id" value="{{ order_id }}" placeholder="Enter Order ID (e.g. 1001)">
+        <button type="submit">Lookup</button>
+    </form>
+
+    {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    {% if order %}
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer Name</th>
+                <th>Item</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in order %}
+            <tr>
+                <td>{{ row.order_id }}</td>
+                <td>{{ row.customer_name }}</td>
+                <td>{{ row.item }}</td>
+                <td>{{ row.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

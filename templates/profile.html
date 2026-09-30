@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}User Profile - ShopAdmin{% endblock %}
+
+{% block content %}
+{% if message %}
+    <div class="alert alert-info">{{ message }}</div>
+{% endif %}
+
+<!-- USER INFORMATION -->
+<div class="card">
+    <h2>Personal Details</h2>
+    <form action="{{ url_for('profile') }}" method="POST">
+        <input type="hidden" name="update_profile" value="1">
+        
+        <div class="form-group">
+            <label>Username:</label>
+            <input type="text" value="{{ user.username if user else '' }}" disabled>
+        </div>
+
+        <div class="form-group">
+            <label>First Name:</label>
+            <input type="text" name="first_name" value="{{ user.first_name or '' if user else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Last Name:</label>
+            <input type="text" name="last_name" value="{{ user.last_name or '' if user else '' }}">
+        </div>
+
+        <div class="form-group">
+            <label>Email Address:</label>
+            <input type="email" name="email" value="{{ user.email or '' if user else '' }}" required>
+        </div>
+
+        <div class="form-group">
+            <label>Contact Number:</label>
+            <input type="text" name="contact" value="{{ user.contact or '' if user else '' }}">
+        </div>
+
+        <button type="submit">Update Profile</button>
+    </form>
+</div>
+
+<!-- ADDRESS MANAGEMENT -->
+<div class="card">
+    <h2>Saved Addresses</h2>
+    {% if addresses %}
+        <ul class="list-group">
+            {% for addr in addresses %}
+                <li class="list-group-item">{{ addr.address }} {% if addr.landmark %}<i>(Landmark: {{ addr.landmark }})</i>{% endif %}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No addresses added yet.</p>
+    {% endif %}
+
+    <h3>Add New Address</h3>
+    <form action="{{ url_for('profile') }}" method="POST">
+        <input type="hidden" name="add_address" value="1">
+
+        <div class="form-group">
+            <label>Street / Address Details:</label>
+            <input type="text" name="address" required placeholder="123 Main Street, City">
+        </div>
+
+        <div class="form-group">
+            <label>Landmark:</label>
+            <input type="text" name="landmark" placeholder="Near City Park">
+        </div>
+
+        <button type="submit">Save Address</button>
+    </form>
+</div>
+{% endblock %}

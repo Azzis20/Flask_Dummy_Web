@@ -1,0 +1,245 @@
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+import mysql.connector
+from datetime import datetime, timedelta
+
+app = Flask(__name__)
+app.secret_key = 'super_secret_shopadmin_key_for_testing'
+
+MYSQL_CONFIG = {
+    'host': '127.0.0.1',
+    'user': 'root',
+    'password': '',        
+    'database': 'shop_db',
+    'port': 3306
+}
+
+def get_db_connection():
+    return mysql.connector.connect(**MYSQL_CONFIG)
+
+def get_client_ip():
+    """Safely extracts client IP address."""
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    return request.remote_addr
+
+def log_audit_event(username, ip_address, action):
+    """Securely logs user actions and IPs using parameterized queries."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # SECURE: Notice the %s placeholders and passing parameters as a tuple.
+        # This completely neutralizes any SQL injection attempt hidden inside the IP header.
+        query = "INSERT INTO audit_logs (username, ip_address, action) VALUES (%s, %s, %s)"
+        cursor.execute(query, (username, ip_address, action))
+        
+        conn.commit()
+        cursor.close()
+    except mysql.connector.Error as e:
+        print(f"[AUDIT ERROR] Could not log event: {e}")
+    finally:
+        if conn and conn.is_connected():
+            conn.close()
+
+
+
+def is_ip_blocked(ip_address):
+    """Dynamically checks if an IP has 5 or more failed logins in the last 15 minutes."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Counts failed attempts from audit_logs within a 15-minute window
+        query = """
+            SELECT COUNT(*) FROM audit_logs 
+            WHERE ip_address = %s 
+              AND action = 'LOGIN_FAILED' 
+              AND timestamp >= (NOW() - INTERVAL 15 MINUTE)
+        """
+        cursor.execute(query, (ip_address,))
+        result = cursor.fetchone()
+        
+        # Block if failures reach 5 or more
+        if result and result[0] >= 5:
+            return True
+            
+    except mysql.connector.Error as e:
+        print(f"[BLOCK CHECK ERROR]: {e}")
+    finally:
+        if conn and conn.is_connected():
+            conn.close()
+            
+    return False
+
+@app.before_request
+def check_blocked_ips():
+    client_ip = get_client_ip()
+    if is_ip_blocked(client_ip):
+        return "Your IP address has been temporarily blocked due to multiple failed login attempts.", 403
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/')
+def home():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    return redirect(url_for('products'))
+
+# 1. Login Page with IP Capture
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'user' in session:
+        return redirect(url_for('products'))
+
+    message = None
+    query_executed = None
+    client_ip = get_client_ip() # Grab the safe client IP
+
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+
+        # VULNERABLE login query (intentional for your testing lab)
+        raw_query = f"select * from users WHERE username = '{username}' AND password = '{password}' "
+        query_executed = raw_query
+
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            user = None
+            try:
+                for result in cursor.execute(raw_query, multi=True):
+                    if result.with_rows:
+                        user = result.fetchone()
+                        break
+            except TypeError:
+                cursor.execute(raw_query)
+                user = cursor.fetchone()
+
+            if user:
+                # Log successful login with IP
+                log_audit_event(username, client_ip, 'LOGIN_SUCCESS')
+
+                session['user_id'] = user[0]
+                session['user'] = user[1]
+                session['role'] = user[3]
+                session['email'] = user[4]
+                
+                cursor.close()
+                conn.close()
+                return redirect(url_for('products'))
+            else:
+                # Log failed login attempt with IP (great for spotting brute-force attacks)
+                log_audit_event(username, client_ip, 'LOGIN_FAILED')
+                message = "Invalid credentials."
+
+            cursor.close()
+        except mysql.connector.Error as e:
+            message = f"MySQL Error: {e}"
+        except Exception as e:
+            message = f"Error: {e}"
+        finally:
+            if conn and conn.is_connected():
+                conn.close()
+
+    return render_template('login.html', message=message, query=query_executed, ip=client_ip)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
+@app.route('/products')
+@login_required
+def products():
+    search = request.args.get('q', '')
+    query_executed = None
+    products_list = []
+    error_msg = None
+
+    if search:
+        raw_query = f"SELECT id, name, category, price FROM products WHERE category = '{search}' OR name LIKE '%{search}%'"
+    else:
+        raw_query = "SELECT id, name, category, price FROM products"
+
+    query_executed = raw_query
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(raw_query)
+        products_list = cursor.fetchall()
+        conn.close()
+    except mysql.connector.Error as e:
+        error_msg = f"MySQL Error: {e}"
+
+    return render_template('products.html', products=products_list, search=search, query=query_executed, error=error_msg)
+
+# 3. Order Tracking (Protected)
+@app.route('/orders/track', methods=['GET', 'POST'])
+@login_required
+def track_order():
+    order_id = request.values.get('order_id', '')
+    query_executed = None
+    order_data = None
+    error_msg = None
+
+    if order_id:
+        # VULNERABLE: Unquoted numeric parameter injection
+        raw_query = f"SELECT id, customer_name, item, status FROM orders WHERE id = {order_id}"
+        query_executed = raw_query
+
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(raw_query)
+            order_data = cursor.fetchall()
+            conn.close()
+        except mysql.connector.Error as e:
+            error_msg = f"MySQL Error: {e}"
+
+    return render_template('order_track.html', order=order_data, order_id=order_id, query=query_executed, error=error_msg)
+
+# 4. Profile Update (Protected)
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    message = None
+    query_executed = None
+
+    user_id = session.get('user_id')
+
+    if request.method == 'POST':
+        email = request.form.get('email', '')
+
+        # VULNERABLE: UPDATE query string concatenation
+        raw_query = f"UPDATE users SET email = '{email}' WHERE id = {user_id}"
+        query_executed = raw_query
+
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(raw_query)
+            conn.commit()
+            message = "Profile updated successfully!"
+            session['email'] = email
+            conn.close()
+        except mysql.connector.Error as e:
+            message = f"MySQL Error: {e}"
+
+    return render_template('profile.html', message=message, query=query_executed)
+
+if __name__ == '__main__':
+    app.run(port=5000, debug=True)

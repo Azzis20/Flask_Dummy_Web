@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - ShopAdmin{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Your Shopping Cart</h2>
+
+    {% if cart_items %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Unit Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td>{{ item.product_name }}</td>
+                    <td>${{ "%.2f"|format(item.price) }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>${{ "%.2f"|format(item.subtotal) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="total-summary">Total: ${{ "%.2f"|format(total_price) }}</div>
+
+        <div class="card">
+            <h3>Checkout Details</h3>
+            <form action="{{ url_for('order.checkout') }}" method="POST">
+                <div class="form-group">
+                    <label for="address">Shipping Address:</label>
+                    <select name="address" id="address" required>
+                        {% if addresses %}
+                            {% for addr in addresses %}
+                                <option value="{{ addr.address }} (Landmark: {{ addr.landmark }})">
+                                    {{ addr.address }} {% if addr.landmark %}(Landmark: {{ addr.landmark }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">No saved address found. Add one in your profile first!</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_number">Contact Number:</label>
+                    <input type="text" name="contact_number" id="contact_number" required placeholder="09123456789">
+                </div>
+
+                <button type="submit" {% if not addresses %}disabled{% endif %}>Place Order</button>
+            </form>
+        </div>
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+</div>
+{% endblock %}

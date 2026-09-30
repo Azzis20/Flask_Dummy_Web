@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}My Orders - ShopAdmin{% endblock %}
+
+{% block content %}
+
+<h2>Order History & Lookup</h2>
+
+{% if orders %}
+
+    {% for order in orders %}
+
+        <div class="card">
+
+            <div class="order-header">
+                <strong>Order #{{ order.id }}</strong>
+
+                <span class="badge badge-{{ order.status|lower }}">
+                    {{ order.status }}
+                </span>
+            </div>
+
+            <p>
+                <strong>Items Summary:</strong>
+                {{ order.item }}
+            </p>
+
+            <p>
+                <strong>Shipping Address:</strong>
+                {{ order.address }}
+            </p>
+
+            <p>
+                <strong>Contact:</strong>
+                {{ order.contact_number }}
+            </p>
+
+            <h4>Line Items</h4>
+
+            <ul class="list-group">
+
+                {% for item in order['items'] %}
+
+                    <li class="list-group-item">
+                        <strong>{{ item.product_name }}</strong>
+                        —
+                        {{ item.quantity }}
+                        x
+                        ${{ "%.2f"|format(item.unit_price) }}
+                    </li>
+
+                {% endfor %}
+
+            </ul>
+
+            {% if order.status == 'Pending' %}
+
+                <form
+                    action="{{ url_for('order.cancel_order', order_id=order.id) }}"
+                    method="POST"
+                >
+                    <button
+                        type="submit"
+                        class="btn-danger"
+                        onclick="return confirm('Are you sure you want to cancel this order?')"
+                    >
+                        Cancel Order
+                    </button>
+                </form>
+
+            {% endif %}
+
+        </div>
+
+    {% endfor %}
+
+{% else %}
+
+    <div class="card">
+        <p>You haven't placed any orders yet.</p>
+    </div>
+
+{% endif %}
+
+{% endblock %}

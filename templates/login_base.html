@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopAdmin Portal Target</title>
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+</head>
+<body>
+    <header>
+        <a href="/" class="brand">SimpleShop</a>
+        
+    </header>
+
+    <main class="container">
+        {% block content %}
+        
+        {% endblock %}
+
+        {% if query %}
+        <div class="debug-box">
+            <div class="debug-title">Backend Executed Query (SQL Debug View)</div>
+            <code>{{ query }}</code>
+        </div>
+        {% endif %}
+    </main>
+</body>
+</html>

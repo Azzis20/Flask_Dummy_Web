@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Product Catalog - ShopAdmin{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Product Catalog</h2>
+
+    <form method="GET" action="{{ url_for('product.products') }}" class="inline-form">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search products or categories...">
+        <button type="submit">Search</button>
+    </form>
+
+    {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>In Stock</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prod in products %}
+            <tr>
+                <td>{{ prod.product_name }}</td>
+                <td>{{ prod.category }}</td>
+                <td>${{ "%.2f"|format(prod.price) }}</td>
+                <td>{{ prod.stock_quantity }}</td>
+                <td>
+                    <form action="{{ url_for('order.add_to_cart') }}" method="POST" class="inline-form">
+                        <input type="hidden" name="product_id" value="{{ prod.id }}">
+                        <input type="number" name="quantity" value="1" min="1" max="{{ prod.stock_quantity }}" class="input-qty">
+                        <button type="submit">Add to Cart</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
