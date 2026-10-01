@@ -13,9 +13,9 @@ def products():
     error_msg = None
 
     if search:
-        raw_query = f"SELECT id, product_name, category, price, stock_quantity FROM Products WHERE category = '{search}' OR product_name LIKE '%{search}%'"
+        raw_query = f"SELECT id, product_name, category, price, stock_quantity FROM products WHERE category = '{search}' OR product_name LIKE '%{search}%'"
     else:
-        raw_query = "SELECT id, product_name, category, price, stock_quantity FROM Products WHERE is_active = 1"
+        raw_query = "SELECT id, product_name, category, price, stock_quantity FROM products WHERE is_active = 1"
 
     query_executed = raw_query
 

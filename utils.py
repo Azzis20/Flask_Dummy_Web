@@ -1,13 +1,18 @@
 import mysql.connector
 from functools import wraps
+from dotenv import load_dotenv
 from flask import request, session, redirect, url_for
+import os
+
+load_dotenv()
+
 
 MYSQL_CONFIG = {
-    'host': '127.0.0.1',
-    'user': 'root',
-    'password': '',        
-    'database': 'shop_db',
-    'port': 3306
+    'host': os.getenv('MYSQL_ADDON_HOST'),
+    'user': os.getenv('MYSQL_ADDON_USER'),
+    'password': os.getenv('MYSQL_ADDON_PASSWORD'),
+    'database': os.getenv('MYSQL_ADDON_DB'),
+    'port': int(os.getenv('MYSQL_ADDON_PORT', 3306))
 }
 
 def get_db_connection():
@@ -67,3 +72,15 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+conn = get_db_connection()
+cursor = conn.cursor()
+
+cursor.execute("SELECT DATABASE()")
+print("Database:", cursor.fetchone())
+
+cursor.execute("SHOW TABLES")
+for table in cursor.fetchall():
+    print(table)
+
+conn.close()

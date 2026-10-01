@@ -36,7 +36,7 @@ def login():
         username = request.form.get('username', '')
         password = request.form.get('password', '')
 
-        raw_query = f"select * from shop_users WHERE username = '{username}' AND password = '{password}' limit 1"
+        raw_query = f"select * FROM shop_users WHERE username = '{username}' AND password = '{password}' limit 1"
         query_executed = raw_query
 
         conn = None
@@ -138,7 +138,7 @@ def profile():
     user_data = cursor.fetchone()
 
     # Fetch User Addresses
-    cursor.execute("SELECT * FROM Address WHERE user_id = %s", (user_id,))
+    cursor.execute("SELECT * FROM address WHERE user_id = %s", (user_id,))
     addresses = cursor.fetchall()
 
     cursor.close()
@@ -147,4 +147,7 @@ def profile():
     return render_template('profile.html', user=user_data, addresses=addresses, message=message, query=query_executed)
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    # Use PORT injected by Clever Cloud, default to 5000 for local dev
+    port = int(os.getenv("PORT", 5000))
+    # Turn off debug mode for production deployment
+    app.run(host="0.0.0.0", port=port, debug=False)

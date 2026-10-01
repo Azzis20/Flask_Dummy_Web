@@ -41,7 +41,7 @@ def view_cart():
 
         if cart:
             placeholders = ', '.join(['%s'] * len(cart))
-            query = f"SELECT id, product_name, price FROM Products WHERE id IN ({placeholders})"
+            query = f"SELECT id, product_name, price FROM products WHERE id IN ({placeholders})"
             cursor.execute(query, list(cart.keys()))
             products = cursor.fetchall()
 
@@ -58,7 +58,7 @@ def view_cart():
                     'subtotal': subtotal
                 })
 
-        cursor.execute("SELECT * FROM Address WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT * FROM address WHERE user_id = %s", (user_id,))
         addresses = cursor.fetchall()
 
     except mysql.connector.Error as e:
@@ -92,7 +92,7 @@ def checkout():
 
         placeholders = ', '.join(['%s'] * len(cart))
         cursor.execute(
-            f"SELECT id, product_name, price, stock_quantity FROM Products WHERE id IN ({placeholders})",
+            f"SELECT id, product_name, price, stock_quantity FROM products WHERE id IN ({placeholders})",
             list(cart.keys())
         )
         products = cursor.fetchall()
@@ -122,7 +122,7 @@ def checkout():
                 VALUES (%s, %s, %s, %s)
             """
             cursor.execute(item_query, (order_id, p['id'], qty, p['price']))
-            cursor.execute("UPDATE Products SET stock_quantity = stock_quantity - %s WHERE id = %s", (qty, p['id']))
+            cursor.execute("UPDATE products SET stock_quantity = stock_quantity - %s WHERE id = %s", (qty, p['id']))
 
         conn.commit()
         session.pop('cart', None)
